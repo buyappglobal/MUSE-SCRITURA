@@ -1,0 +1,6 @@
+{
+  "name": "Guionista de Subtítulos Instrumentales",
+  "description": "Crea y sincroniza guiones poéticos y místicos en formato SRT para canciones instrumentales",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

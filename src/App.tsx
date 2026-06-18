@@ -481,6 +481,78 @@ export default function App() {
     }
   };
 
+  // Storyboard image generation for a single block
+  const onGenerateImageForBlock = async (blockId: number) => {
+    // Find the block
+    const block = compiledBlocks.find((b) => b.id === blockId);
+    if (!block) return;
+
+    // Set loading state for this block
+    setCompiledBlocks((prev) =>
+      prev.map((b) => (b.id === blockId ? { ...b, isGeneratingImg: true } : b))
+    );
+
+    try {
+      const res = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: block.text,
+          title: title,
+          poeticPrompt: poeticPrompt
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "No se pudo procesar la generación de la imagen.");
+      }
+
+      setCompiledBlocks((prev) =>
+        prev.map((b) =>
+          b.id === blockId
+            ? {
+                ...b,
+                imageUrl: data.imageUrl,
+                imagePrompt: data.expandedPrompt,
+                isGeneratingImg: false,
+              }
+            : b
+        )
+      );
+    } catch (err: any) {
+      console.error("Error al generar imagen de escena:", err);
+      setCompiledBlocks((prev) =>
+        prev.map((b) => (b.id === blockId ? { ...b, isGeneratingImg: false } : b))
+      );
+      setErrorMessage("No se pudo generar la imagen de la escena: " + err.message);
+    }
+  };
+
+  // Generate for all scenes sequentially
+  const onGenerateAllStoryboardImages = async () => {
+    // Collect all blocks that don't have images yet and are not loading
+    const blocksToGenerate = compiledBlocks.filter((b) => !b.imageUrl && !b.isGeneratingImg);
+    if (blocksToGenerate.length === 0) {
+      return;
+    }
+
+    for (const block of blocksToGenerate) {
+      await onGenerateImageForBlock(block.id);
+    }
+  };
+
+  // Clear all storyboard images
+  const onClearAllStoryboardImages = () => {
+    setCompiledBlocks((prev) =>
+      prev.map((b) => ({
+        ...b,
+        imageUrl: undefined,
+        imagePrompt: undefined
+      }))
+    );
+  };
+
   return (
     <div 
       className="min-h-screen bg-immersive-bg text-slate-100 flex flex-col selection:bg-immersive-accent/30 selection:text-white relative overflow-x-hidden"
@@ -854,6 +926,9 @@ export default function App() {
                 onUpdateBlock={handleUpdateBlockInTimeline}
                 onAddBlock={handleAddBlockToTimeline}
                 onDeleteBlock={handleDeleteBlockInTimeline}
+                onGenerateImage={onGenerateImageForBlock}
+                onGenerateAllImages={onGenerateAllStoryboardImages}
+                onClearAllImages={onClearAllStoryboardImages}
               />
             </>
           )}

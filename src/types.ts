@@ -5,6 +5,9 @@ export interface SubtitleBlock {
   startTimeStr: string; // "HH:MM:SS,mmm"
   endTimeStr: string; // "HH:MM:SS,mmm"
   text: string;
+  imageUrl?: string;
+  imagePrompt?: string;
+  isGeneratingImg?: boolean;
 }
 
 export interface SongPreset {

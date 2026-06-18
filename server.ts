@@ -143,6 +143,111 @@ Las primeras notas flotan en el vacío de la memoria...`
   }
 });
 
+// Endpoint to generate storyboard scene images with prompt expansion, Imagen, and fallback
+app.post("/api/generate-image", async (req, res) => {
+  try {
+    const { prompt, title, poeticPrompt } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({ error: "El texto para la escena es requerido." });
+    }
+
+    const ai = getAiClient();
+
+    // 1. Expand the poetic line into a cinematic image prompt using Gemini 3.5 Flash
+    let expandedPrompt = `A cinematic, highly detailed and artistic photo representing: "${prompt}".`;
+    try {
+      const expansionResponse = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: `Create a brief, highly visual, cinematic and artistic image generation prompt (in English, max 40 words) for the following poetic verse: "${prompt}".
+The song is named "${title || "Unknown"}" and has the following poetic atmosphere: "${poeticPrompt || "Cinematic, moody"}".
+Do not include any prefixes, introductions, or conversational text. Return ONLY the English prompt.`,
+        config: {
+          systemInstruction: "You are an art director and concept artist. You turn poetic verses into gorgeous, evocative image generation prompts focused on atmospheric lighting, depth of field, and symbolic fine art cinematography."
+        }
+      });
+      if (expansionResponse.text?.trim()) {
+        expandedPrompt = expansionResponse.text.trim();
+      }
+    } catch (err) {
+      console.warn("Failed to expand prompt, using default cinematic prompt:", err);
+    }
+
+    // 2. Generate the actual image using Gemini/Imagen
+    let b64Image = "";
+    let isMock = false;
+
+    try {
+      // First, try traditional Imagen 4
+      const imageResponse = await ai.models.generateImages({
+        model: "imagen-4.0-generate-001",
+        prompt: expandedPrompt,
+        config: {
+          numberOfImages: 1,
+          outputMimeType: "image/jpeg",
+          aspectRatio: "16:9",
+        },
+      });
+
+      if (imageResponse.generatedImages?.[0]?.image?.imageBytes) {
+        b64Image = `data:image/jpeg;base64,${imageResponse.generatedImages[0].image.imageBytes}`;
+      }
+    } catch (err1) {
+      console.warn("Failed with Imagen 4, trying gemini-2.5-flash-image fallback...", err1);
+      try {
+        // Fallback option: gemini-2.5-flash-image
+        const fallbackResponse = await ai.models.generateContent({
+          model: "gemini-2.5-flash-image",
+          contents: {
+            parts: [{ text: expandedPrompt }],
+          },
+          config: {
+            imageConfig: {
+              aspectRatio: "16:9",
+              imageSize: "1K"
+            }
+          }
+        });
+
+        // Find the image part in the parts array
+        if (fallbackResponse.candidates?.[0]?.content?.parts) {
+          for (const part of fallbackResponse.candidates[0].content.parts) {
+            if (part.inlineData?.data) {
+              b64Image = `data:image/png;base64,${part.inlineData.data}`;
+              break;
+            }
+          }
+        }
+      } catch (err2) {
+        console.warn("Both Gemini image generators failed or are restricted. Falling back to Picsum stock placeholder...", err2);
+        // Fallback to high-quality Picsum seed placeholder matching the scene text hash so it remains stable!
+        const cleanSeed = encodeURIComponent(prompt.replace(/[^a-zA-Z0-9]/g, "").substring(0, 30) || "story");
+        b64Image = `https://picsum.photos/seed/${cleanSeed}/960/540`;
+        isMock = true;
+      }
+    }
+
+    if (!b64Image) {
+      // Emergency fallback if somehow empty
+      const cleanSeed = encodeURIComponent(prompt.substring(0, 15));
+      b64Image = `https://picsum.photos/seed/${cleanSeed}/960/540`;
+      isMock = true;
+    }
+
+    return res.json({
+      imageUrl: b64Image,
+      expandedPrompt: expandedPrompt,
+      isMock: isMock
+    });
+
+  } catch (error: any) {
+    console.error("Error in generate-image endpoint:", error);
+    return res.status(500).json({
+      error: error.message || "Error al procesar la generación de imagen con el modelo de Gemini."
+    });
+  }
+});
+
 // Configure Vite or production static file serving
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {

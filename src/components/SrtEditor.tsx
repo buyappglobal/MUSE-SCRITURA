@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { SubtitleBlock } from "../types";
 import { compileSRT, parseSRT, formatSecondsToTimestamp, parseTimestampToSeconds } from "../utils/srtParser";
-import { Copy, Download, Edit3, Eye, Code, Plus, Trash2, Check, RefreshCw, FileText } from "lucide-react";
+import { Copy, Download, Edit3, Eye, Code, Plus, Trash2, Check, RefreshCw, FileText, Image as ImageIcon, Sparkles, Play } from "lucide-react";
 
 interface SrtEditorProps {
   initialSrt: string;
@@ -14,6 +14,9 @@ interface SrtEditorProps {
   onUpdateBlock: (updatedBlock: SubtitleBlock) => void;
   onAddBlock: () => void;
   onDeleteBlock: (id: number) => void;
+  onGenerateImage?: (blockId: number) => void;
+  onGenerateAllImages?: () => void;
+  onClearAllImages?: () => void;
 }
 
 export const SrtEditor: React.FC<SrtEditorProps> = ({
@@ -26,11 +29,15 @@ export const SrtEditor: React.FC<SrtEditorProps> = ({
   onSeek,
   onUpdateBlock,
   onAddBlock,
-  onDeleteBlock
+  onDeleteBlock,
+  onGenerateImage,
+  onGenerateAllImages,
+  onClearAllImages
 }) => {
-  const [activeTab, setActiveTab] = useState<"blocks" | "raw" | "story">("blocks");
+  const [activeTab, setActiveTab] = useState<"blocks" | "raw" | "story" | "storyboard">("blocks");
   const [copied, setCopied] = useState(false);
   const [rawText, setRawText] = useState(initialSrt);
+  const [isGeneratingAll, setIsGeneratingAll] = useState(false);
 
   // Sync internal rawText state with parent initialSrt changes
   useEffect(() => {
@@ -149,6 +156,18 @@ ${compileSRT(subtitleBlocks)}
           >
             <FileText className="w-3.5 h-3.5" />
             <span>Voz de Guionista</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("storyboard")}
+            className={`px-4 py-2 text-xs font-mono font-medium border-t-2 transition cursor-pointer select-none rounded-t-lg flex items-center gap-1.5 ${
+              activeTab === "storyboard"
+                ? "bg-immersive-panel text-white border-immersive-accent font-bold"
+                : "border-transparent text-[#94a3b8] hover:text-white"
+            }`}
+          >
+            <ImageIcon className="w-3.5 h-3.5 text-rose-400" />
+            <span>Guion Gráfico / Storyboard</span>
           </button>
         </div>
 
@@ -359,6 +378,172 @@ ${compileSRT(subtitleBlocks)}
               </span>
             </div>
 
+          </div>
+        )}
+
+        {/* Tab: STORYBOARD GRAPHICS */}
+        {activeTab === "storyboard" && (
+          <div className="space-y-5 text-left">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 pb-3 border-b border-immersive-border">
+              <div>
+                <h4 className="font-cinzel text-sm font-bold text-white tracking-wider flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
+                  Director de Fotografía & Guion Gráfico Artístico
+                </h4>
+                <p className="text-[11px] text-slate-400 font-serif mt-1">
+                  Genera una secuencia de tomas cinemáticas basadas en la lírica de tus subtítulos utilizando Gemini e Imagen 4.
+                </p>
+              </div>
+
+              <div className="flex gap-2 shrink-0">
+                {onClearAllImages && subtitleBlocks.some((b) => b.imageUrl) && (
+                  <button
+                    onClick={onClearAllImages}
+                    className="px-2.5 py-1.5 bg-red-950/20 hover:bg-red-900/30 border border-red-900/30 text-red-400 text-xs font-mono rounded-lg transition cursor-pointer"
+                    title="Eliminar todas las imágenes del storyboard"
+                  >
+                    Limpiar Storyboard
+                  </button>
+                )}
+
+                {onGenerateAllImages && (
+                  <button
+                    onClick={async () => {
+                      setIsGeneratingAll(true);
+                      try {
+                        await onGenerateAllImages();
+                      } finally {
+                        setIsGeneratingAll(false);
+                      }
+                    }}
+                    disabled={isGeneratingAll || subtitleBlocks.length === 0}
+                    className={`px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono font-medium rounded-lg transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-rose-600/20 ${
+                      isGeneratingAll ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                    <span>{isGeneratingAll ? "Generando Narrativa..." : "Generar Todo"}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {subtitleBlocks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center text-[#94a3b8] space-y-2">
+                <ImageIcon className="w-12 h-12 stroke-1 text-slate-600 animate-pulse" />
+                <p className="text-sm font-serif italic text-slate-400">Sin líneas de tiempo</p>
+                <p className="text-xs">Crea o genera un guion poético para empezar el storyboard.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pb-4">
+                {subtitleBlocks.map((block) => {
+                  const isCurrent = currentTime >= block.startTime && currentTime <= block.endTime;
+                  
+                  return (
+                    <div 
+                      key={block.id}
+                      className={`relative flex flex-col bg-immersive-bg/40 border rounded-xl overflow-hidden group transition-all duration-300 ${
+                        isCurrent 
+                          ? "border-rose-500/50 shadow-md shadow-rose-500/5" 
+                          : "border-immersive-border hover:border-slate-700"
+                      }`}
+                    >
+                      {/* Top Header info */}
+                      <div className="p-2 bg-black/40 border-b border-immersive-border flex justify-between items-center text-[10px] font-mono text-slate-400">
+                        <span className="font-bold text-slate-300">ESCENA #{block.id}</span>
+                        <span>{block.startTimeStr.split(",")[0]} - {block.endTimeStr.split(",")[0]}</span>
+                      </div>
+
+                      {/* Content Container (Image / Spinner / Empty) */}
+                      <div className="aspect-video relative overflow-hidden bg-black/60 flex items-center justify-center">
+                        {block.isGeneratingImg ? (
+                          <div className="flex flex-col items-center justify-center space-y-2.5 p-3 text-center">
+                            <div className="relative w-8 h-8">
+                              <div className="absolute inset-0 rounded-full border-2 border-dashed border-rose-500/20 animate-spin"></div>
+                              <div className="absolute inset-1 rounded-full border-2 border-dashed border-rose-500 animate-spin [animation-direction:reverse]"></div>
+                            </div>
+                            <span className="text-[10px] font-mono text-rose-400 tracking-wider animate-pulse">Imaginando escena con Gemini...</span>
+                          </div>
+                        ) : block.imageUrl ? (
+                          <div className="w-full h-full relative group/img">
+                            <img
+                              src={block.imageUrl}
+                              alt={`Escena ${block.id}`}
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
+                            {/* Hover Actions Panel */}
+                            <div className="absolute inset-0 bg-black/75 opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => onSeek(block.startTime)}
+                                className="p-2 bg-rose-600 hover:bg-rose-500 text-white rounded-full transition transform hover:scale-110 cursor-pointer shadow-lg"
+                                title="Sincronizar música a este punto"
+                              >
+                                <Play className="w-4 h-4 fill-white" />
+                              </button>
+                              
+                              {onGenerateImage && (
+                                <button
+                                  onClick={() => onGenerateImage(block.id)}
+                                  className="p-2 bg-white/10 hover:bg-white/20 hover:text-rose-400 text-white rounded-full transition transform hover:scale-110 cursor-pointer border border-white/10"
+                                  title="Regenerar escena con Gemini"
+                                >
+                                  <RefreshCw className="w-4 h-4" />
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => {
+                                  onUpdateBlock({ ...block, imageUrl: undefined, imagePrompt: undefined });
+                                }}
+                                className="p-2 bg-red-950/40 hover:bg-red-600/90 text-red-400 hover:text-white rounded-full transition transform hover:scale-110 cursor-pointer border border-red-500/10"
+                                title="Eliminar imagen"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div 
+                            onClick={() => onGenerateImage && onGenerateImage(block.id)}
+                            className="w-full h-full flex flex-col items-center justify-center p-4 text-center cursor-pointer group/empty hover:bg-rose-500/[0.03] transition-colors"
+                          >
+                            <div className="w-9 h-9 rounded-full bg-rose-500/10 flex items-center justify-center border border-rose-500/20 group-hover/empty:scale-105 transition-all duration-300 mb-2">
+                              <ImageIcon className="w-4 h-4 text-rose-500" />
+                            </div>
+                            <span className="text-[10px] uppercase font-mono tracking-widest text-[#94a3b8]">Escena sin imagen</span>
+                            {onGenerateImage && (
+                              <span className="text-[9px] text-rose-400 mt-1 uppercase font-mono hover:underline">Sintetizar</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer lyrical text preview (Film script style) */}
+                      <div className="p-3 flex-1 flex flex-col justify-between space-y-2 bg-[#09070c]">
+                        <p className="text-[11px] text-slate-300 font-serif italic leading-relaxed text-left line-clamp-2">
+                          "{block.text || "Silencio de escena..."}"
+                        </p>
+
+                        {block.imagePrompt && (
+                          <div className="pt-2 border-t border-immersive-border/30">
+                            <span className="text-[8px] uppercase tracking-wider text-slate-500 font-mono block block-header">
+                              Idea Cinemática (Gemini Prompt)
+                            </span>
+                            <p 
+                              className="text-[9px] text-slate-400 font-mono italic leading-snug truncate cursor-help mt-0.5" 
+                              title={block.imagePrompt}
+                            >
+                              {block.imagePrompt}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

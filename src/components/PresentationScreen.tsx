@@ -1,7 +1,7 @@
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useState, useEffect } from "react";
 import { SubtitleBlock } from "../types";
 import { formatSecondsToTimestamp } from "../utils/srtParser";
-import { Play, Pause, SkipBack, Music, Volume2 } from "lucide-react";
+import { Play, Pause, SkipBack, Music, Volume2, Mic, MicOff, Sliders, VolumeX } from "lucide-react";
 
 interface PresentationScreenProps {
   title: string;
@@ -25,6 +25,96 @@ export const PresentationScreen: React.FC<PresentationScreenProps> = ({
   subtitleBlocks,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Text-To-Speech states
+  const [isSpeechEnabled, setIsSpeechEnabled] = useState(() => {
+    return localStorage.getItem("muse-speech-enabled") === "true";
+  });
+  const [selectedVoiceName, setSelectedVoiceName] = useState(() => {
+    return localStorage.getItem("muse-speech-voice") || "";
+  });
+  const [speechRate, setSpeechRate] = useState(() => {
+    return parseFloat(localStorage.getItem("muse-speech-rate") || "1.0");
+  });
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  const synth = typeof window !== "undefined" ? window.speechSynthesis : null;
+
+  // Track speech preference changes
+  useEffect(() => {
+    localStorage.setItem("muse-speech-enabled", String(isSpeechEnabled));
+  }, [isSpeechEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem("muse-speech-voice", selectedVoiceName);
+  }, [selectedVoiceName]);
+
+  useEffect(() => {
+    localStorage.setItem("muse-speech-rate", String(speechRate));
+  }, [speechRate]);
+
+  // Load and subscribe browser voice lists
+  useEffect(() => {
+    if (!synth) return;
+    
+    const updateVoices = () => {
+      const allVoices = synth.getVoices();
+      // Filter primarily for Spanish voices or return all if none found
+      const esVoices = allVoices.filter(v => v.lang.toLowerCase().includes("es"));
+      setVoices(esVoices.length > 0 ? esVoices : allVoices);
+    };
+
+    updateVoices();
+    synth.onvoiceschanged = updateVoices;
+    
+    return () => {
+      synth.onvoiceschanged = null;
+    };
+  }, [synth]);
+
+  // Perform active block narration loop
+  useEffect(() => {
+    if (!synth) return;
+
+    // Instantly cancel any ongoing speech
+    synth.cancel();
+
+    if (isPlaying && isSpeechEnabled && activeBlock && activeBlock.text) {
+      // Remove staging commands / actions inside brackets or parenthesis for a pristine voiceover
+      const narrationText = activeBlock.text
+        .replace(/\[.*?\]/g, "")
+        .replace(/\(.*?\)/g, "")
+        .trim();
+
+      if (narrationText) {
+        const utterance = new SpeechSynthesisUtterance(narrationText);
+        
+        // Match chosen voice or pick default Spanish voice
+        const availableVoices = synth.getVoices();
+        let targetVoice = availableVoices.find(v => v.name === selectedVoiceName);
+        
+        if (!targetVoice) {
+          // Fallback to first Spanish voice
+          targetVoice = availableVoices.find(v => v.lang.toLowerCase().includes("es"));
+        }
+        
+        if (targetVoice) {
+          utterance.voice = targetVoice;
+        }
+        
+        utterance.rate = speechRate;
+        utterance.pitch = 1.0;
+        
+        synth.speak(utterance);
+      }
+    }
+
+    return () => {
+      if (synth) {
+        synth.cancel();
+      }
+    };
+  }, [currentTime, isPlaying, isSpeechEnabled]);
 
   // Determine the subtitle block currently active
   const activeBlock = useMemo(() => {
@@ -170,7 +260,7 @@ export const PresentationScreen: React.FC<PresentationScreenProps> = ({
       </div>
 
       {/* Subtitles Audio Controls Panel */}
-      <div className="bg-immersive-bg/75 px-6 py-4 border-t border-immersive-border flex flex-col md:flex-row items-center justify-between gap-4 z-10">
+      <div className="bg-immersive-bg/75 px-6 py-4 border-t border-immersive-border flex flex-col lg:flex-row items-center justify-between gap-4 z-10">
         
         {/* Playback Buttons */}
         <div className="flex items-center gap-3">
@@ -202,9 +292,74 @@ export const PresentationScreen: React.FC<PresentationScreenProps> = ({
           </button>
         </div>
 
+        {/* Narrative Voiceover Controls */}
+        <div className="flex flex-wrap items-center gap-3 bg-immersive-glass/40 border border-immersive-border/60 rounded-2xl px-4 py-2.5 text-xs">
+          {/* Narrator activate button */}
+          <button
+            onClick={() => setIsSpeechEnabled(!isSpeechEnabled)}
+            className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 font-mono text-[11px] transition-all duration-300 select-none cursor-pointer ${
+              isSpeechEnabled
+                ? "bg-immersive-accent/15 border-immersive-accent/40 text-white shadow-lg shadow-immersive-accent/10"
+                : "bg-transparent border-immersive-border text-[#94a3b8] hover:text-white"
+            }`}
+            title={isSpeechEnabled ? "Desactivar Narración de Voz" : "Activar Narración de Voz"}
+          >
+            {isSpeechEnabled ? (
+              <>
+                <Mic className="w-3.5 h-3.5 text-immersive-accent animate-pulse" />
+                <span className="font-semibold text-white">NARRACIÓN ACTIVA</span>
+              </>
+            ) : (
+              <>
+                <MicOff className="w-3.5 h-3.5 text-slate-500" />
+                <span>NARRACIÓN DETENIDA</span>
+              </>
+            )}
+          </button>
+
+          {isSpeechEnabled && (
+            <div className="flex flex-wrap items-center gap-2.5 transition">
+              {/* Voice selector */}
+              {voices.length > 0 && (
+                <div className="flex items-center gap-1 bg-immersive-bg/50 border border-immersive-border px-2.5 py-1 rounded-xl">
+                  <select
+                    value={selectedVoiceName}
+                    onChange={(e) => setSelectedVoiceName(e.target.value)}
+                    className="bg-transparent text-white border-none focus:outline-none focus:ring-0 text-[10px] max-w-[125px] font-medium cursor-pointer"
+                    title="Voz del narrador"
+                  >
+                    <option value="" className="bg-[#0f0a15] text-[#94a3b8]">Voz por defecto (ES)</option>
+                    {voices.map((v) => (
+                      <option key={v.name} value={v.name} className="bg-[#0f0a15] text-white">
+                        {v.name.replace("Microsoft", "").replace("Google", "").trim()} ({v.lang})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Rate speed selector */}
+              <div className="flex items-center gap-1.5 bg-immersive-bg/50 border border-immersive-border px-2.5 py-1 rounded-xl">
+                <Sliders className="w-3 h-3 text-immersive-accent" />
+                <select
+                  value={speechRate}
+                  onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                  className="bg-transparent text-white border-none focus:outline-none focus:ring-0 text-[10px] font-semibold cursor-pointer"
+                  title="Velocidad del narrador"
+                >
+                  <option value="0.75" className="bg-[#0f0a15] text-white">0.75x Lento</option>
+                  <option value="1.0" className="bg-[#0f0a15] text-white">1.0x Normal</option>
+                  <option value="1.25" className="bg-[#0f0a15] text-white">1.25x Rápido</option>
+                  <option value="1.5" className="bg-[#0f0a15] text-white">1.5x Veloz</option>
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Current status info */}
-        <div className="text-center md:text-right font-mono text-xs text-slate-400 flex flex-col md:items-end justify-center">
-          <div className="flex items-center gap-2 justify-center md:justify-end text-immersive-accent mb-0.5">
+        <div className="text-center lg:text-right font-mono text-xs text-slate-400 flex flex-col lg:items-end justify-center">
+          <div className="flex items-center gap-2 justify-center lg:justify-end text-immersive-accent mb-0.5">
             <Volume2 className="w-3.5 h-3.5 text-immersive-accent animate-pulse" />
             <span>{isPlaying ? "Reproduciendo pista sonora mística..." : "Audio en pausa"}</span>
           </div>

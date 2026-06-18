@@ -16,7 +16,8 @@ import {
   Database,
   Film,
   Dribbble,
-  Radio
+  Radio,
+  Palette
 } from "lucide-react";
 
 // Pre-load default initial dataset based on the first preset "Ecos Cósmicos de Andrómeda"
@@ -64,6 +65,28 @@ const LOADING_MESSAGES = [
 ];
 
 export default function App() {
+  // Configuración de colores de énfasis dinámicos
+  const ACCENT_COLORS = [
+    { id: "violet", name: "Violeta Cósmico", rgb: "139, 92, 246" },
+    { id: "emerald", name: "Verde Esmeralda", rgb: "16, 185, 129" },
+    { id: "cyan", name: "Azul Sideral", rgb: "6, 182, 212" },
+    { id: "amber", name: "Ámbar Místico", rgb: "245, 158, 11" },
+    { id: "rose", name: "Rosa Aurora", rgb: "244, 63, 94" },
+  ];
+
+  const [accentId, setAccentId] = useState(() => {
+    return localStorage.getItem("muse-accent-color") || "violet";
+  });
+
+  const activeAccent = ACCENT_COLORS.find(c => c.id === accentId) || ACCENT_COLORS[0];
+
+  useEffect(() => {
+    localStorage.setItem("muse-accent-color", accentId);
+    if (typeof document !== "undefined") {
+      document.documentElement.style.setProperty("--accent-rgb", activeAccent.rgb);
+    }
+  }, [accentId, activeAccent]);
+
   // Inputs States
   const [title, setTitle] = useState(INITIAL_PRESET.title);
   const [duration, setDuration] = useState(INITIAL_PRESET.duration); // in seconds
@@ -448,7 +471,12 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-immersive-bg text-slate-100 flex flex-col selection:bg-immersive-accent/30 selection:text-white relative overflow-x-hidden">
+    <div 
+      className="min-h-screen bg-immersive-bg text-slate-100 flex flex-col selection:bg-immersive-accent/30 selection:text-white relative overflow-x-hidden"
+      style={{
+        "--accent-rgb": activeAccent.rgb
+      } as React.CSSProperties}
+    >
       
       {/* Immersive UI ambient glowing orbs */}
       <div className="atmosphere"></div>
@@ -463,13 +491,13 @@ export default function App() {
       />
 
       {/* Decorative top gradient row representing color bands */}
-      <div className="h-1 w-full bg-linear-to-r from-immersive-accent/40 via-purple-500 to-cyan-400/40"></div>
+      <div className="h-1 w-full bg-linear-to-r from-immersive-accent/50 via-immersive-accent/20 to-transparent"></div>
 
       {/* Hero Header bar */}
       <header className="border-b border-immersive-border bg-immersive-bg/85 backdrop-blur-xl px-6 py-5 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-immersive-accent flex items-center justify-center shadow-lg shadow-immersive-accent/20 select-none">
+            <div className="w-10 h-10 rounded-xl bg-immersive-accent flex items-center justify-center shadow-lg shadow-immersive-accent/20 transition-all duration-300 select-none">
               <Film className="w-5 h-5 text-white" />
             </div>
             <div className="flex flex-col text-left">
@@ -482,12 +510,30 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono bg-immersive-glass text-cyan-400 border border-immersive-border px-2.5 py-1 rounded-full flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Color Accent Dropdown Selector */}
+            <div className="flex items-center gap-2 bg-immersive-glass border border-immersive-border px-3 py-1.5 rounded-xl text-xs font-mono transition-all duration-300">
+              <Palette className="w-3.5 h-3.5 text-immersive-accent animate-pulse" />
+              <span className="text-[10px] text-slate-400 uppercase tracking-widest hidden sm:inline">Tono de Énfasis:</span>
+              <select
+                value={accentId}
+                onChange={(e) => setAccentId(e.target.value)}
+                className="bg-transparent text-white border-none focus:outline-none focus:ring-0 text-xs font-semibold select-none cursor-pointer pr-1 transition-colors"
+                title="Personalizar color del tema"
+              >
+                {ACCENT_COLORS.map((col) => (
+                  <option key={col.id} value={col.id} className="bg-[#0f0a15] text-white font-sans text-xs">
+                    {col.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <span className="text-[10px] font-mono bg-immersive-glass text-cyan-400 border border-immersive-border px-2.5 py-1.5 rounded-xl flex items-center gap-1.5">
               <Radio className="w-3 h-3 animate-ping text-cyan-400" />
               <span>MOTOR GEMINI 3.5 FLASH</span>
             </span>
-            <span className="text-[10px] font-mono bg-immersive-glass text-immersive-accent border border-immersive-border px-2.5 py-1 rounded-full flex items-center gap-1.5">
+            <span className="text-[10px] font-mono bg-immersive-glass text-immersive-accent border border-immersive-border px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 transition-all duration-300">
               <Database className="w-3 h-3 text-immersive-accent" />
               <span>SÍNTESIS SEGURA SERVER-SIDE</span>
             </span>

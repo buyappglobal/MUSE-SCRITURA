@@ -53,3 +53,58 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-immersive-accent);
 }
+
+/* Custom CSS Canvas Animations */
+
+@keyframes auroraMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.canvas-aurora {
+  background: linear-gradient(135deg, #020109 0%, #0d0a21 25%, rgba(var(--accent-rgb, 139, 92, 246), 0.16) 50%, #051424 75%, #020109 100%);
+  background-size: 400% 400%;
+  animation: auroraMove 22s ease infinite;
+}
+
+@keyframes starDrift {
+  0% { transform: translateY(0px) translateX(0px); }
+  100% { transform: translateY(-280px) translateX(-80px); }
+}
+
+.canvas-stars {
+  position: absolute;
+  inset: -100px;
+  background-image: 
+    radial-gradient(1px 1.5px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 120px 70px, rgba(255,255,255,0.9), rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 80px 180px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 220px 110px, rgba(139, 92, 246, 0.5), rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 310px 240px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 160px 320px, rgba(255,255,255,0.8), rgba(0,0,0,0)),
+    radial-gradient(2.5px 2.5px at 420px 150px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1px 2px at 350px 50px, rgba(6, 182, 212, 0.4), rgba(0,0,0,0));
+  background-size: 500px 350px;
+  animation: starDrift 30s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(0.6); opacity: 0.02; }
+  50% { opacity: 0.18; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+.pulse-ring-1 {
+  animation: pulseRing 8s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+}
+.pulse-ring-2 {
+  animation: pulseRing 8s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+  animation-delay: 2.6s;
+}
+.pulse-ring-3 {
+  animation: pulseRing 8s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+  animation-delay: 5.2s;
+}
+

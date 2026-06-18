@@ -1,7 +1,7 @@
 import React, { useRef, useMemo, useState, useEffect } from "react";
 import { SubtitleBlock } from "../types";
 import { formatSecondsToTimestamp } from "../utils/srtParser";
-import { Play, Pause, SkipBack, Music, Volume2, Mic, MicOff, Sliders, VolumeX } from "lucide-react";
+import { Play, Pause, SkipBack, Music, Volume2, Mic, MicOff, Sliders, VolumeX, Eye, EyeOff, Layers, Sparkles } from "lucide-react";
 
 interface PresentationScreenProps {
   title: string;
@@ -25,6 +25,24 @@ export const PresentationScreen: React.FC<PresentationScreenProps> = ({
   subtitleBlocks,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Clean mode state to hide all overlay elements to record clean video
+  const [isCleanMode, setIsCleanMode] = useState(() => {
+    return localStorage.getItem("muse-clean-mode") === "true";
+  });
+
+  // Selected dynamic visual canvas background
+  const [canvasBg, setCanvasBg] = useState(() => {
+    return localStorage.getItem("muse-canvas-bg") || "nebula";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("muse-clean-mode", String(isCleanMode));
+  }, [isCleanMode]);
+
+  useEffect(() => {
+    localStorage.setItem("muse-canvas-bg", canvasBg);
+  }, [canvasBg]);
 
   // Text-To-Speech states
   const [isSpeechEnabled, setIsSpeechEnabled] = useState(() => {
@@ -138,49 +156,102 @@ export const PresentationScreen: React.FC<PresentationScreenProps> = ({
   return (
     <div className="flex flex-col w-full bg-immersive-panel/95 border border-immersive-border rounded-2xl overflow-hidden shadow-2xl relative backdrop-blur-xl">
       
-      {/* Cinematic Frame */}
-      <div className="bg-immersive-bg/90 border-b border-immersive-border px-4 py-2.5 flex items-center justify-between text-xs font-mono text-[#94a3b8]">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></span>
-          <span className="uppercase tracking-wider">SALA DE PROYECCIÓN DE GUION</span>
+      {/* Cinematic Frame - Hidden in Clean Mode */}
+      {!isCleanMode && (
+        <div className="bg-immersive-bg/90 border-b border-immersive-border px-4 py-2.5 flex items-center justify-between text-xs font-mono text-[#94a3b8]">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></span>
+            <span className="uppercase tracking-wider">SALA DE PROYECCIÓN DE GUION</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Music className="w-3.5 h-3.5 text-immersive-accent" />
+            <span className="truncate max-w-[200px] font-semibold text-white">{title || "Sin título"}</span>
+          </div>
+          <div className="text-immersive-accent font-semibold tracking-wider">
+            {formatSecondsToTimestamp(currentTime).split(",")[0]} / {formatSecondsToTimestamp(duration).split(",")[0]}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Music className="w-3.5 h-3.5 text-immersive-accent" />
-          <span className="truncate max-w-[200px] font-semibold text-white">{title || "Sin título"}</span>
-        </div>
-        <div className="text-immersive-accent font-semibold tracking-wider">
-          {formatSecondsToTimestamp(currentTime).split(",")[0]} / {formatSecondsToTimestamp(duration).split(",")[0]}
-        </div>
-      </div>
+      )}
 
       {/* Actual Projection Board */}
       <div className="aspect-[16/9] w-full bg-[#040306] relative flex flex-col justify-between p-6 overflow-hidden group select-none">
         
-        {/* Procedural Cosmic Background (Nebula dust stars) using CSS */}
-        <div className="absolute inset-0 bg-radial-gradient from-immersive-accent/10 via-immersive-bg/95 to-black pointer-events-none z-0"></div>
-        
-        {/* Subtle moving light effect */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-immersive-accent/10 blur-[120px] rounded-full animate-pulse z-0 pointer-events-none"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-600/5 blur-[120px] rounded-full animate-pulse z-0 pointer-events-none"></div>
+        {/* Toggle clean mode floating button (Subtle auto-hiding widget) */}
+        <button
+          onClick={() => setIsCleanMode(!isCleanMode)}
+          className="absolute top-3 right-3 z-30 p-2 bg-black/60 hover:bg-black/90 text-slate-400 hover:text-white rounded-xl border border-white/10 opacity-30 hover:opacity-100 transition-all duration-300 flex items-center gap-1.5 text-[10px] uppercase tracking-wider cursor-pointer"
+          title={isCleanMode ? "Mostrar interfaz completa" : "Ocultar interfaz para grabación limpia"}
+        >
+          {isCleanMode ? (
+            <>
+              <Eye className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-emerald-400 font-semibold">Mostrar Interfaz</span>
+            </>
+          ) : (
+            <>
+              <EyeOff className="w-3.5 h-3.5" />
+              <span>Modo Limpio</span>
+            </>
+          )}
+        </button>
 
-        {/* Cinematic Grid Watermark */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(139,92,246,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.04)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none z-0"></div>
+        {/* CHOSEN DYNAMIC VISUAL CANVAS BACKGROUNDS */}
+        {canvasBg === "nebula" && (
+          <>
+            {/* Procedural Cosmic Background (Nebula dust stars) using CSS */}
+            <div className="absolute inset-0 bg-radial-gradient from-immersive-accent/15 via-immersive-bg/95 to-black pointer-events-none z-0"></div>
+            {/* Subtle moving light effect */}
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-immersive-accent/10 blur-[120px] rounded-full animate-pulse z-0 pointer-events-none"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-600/5 blur-[120px] rounded-full animate-pulse z-0 pointer-events-none"></div>
+            {/* Cinematic Grid Watermark */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(139,92,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.03)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none z-0"></div>
+          </>
+        )}
 
-        {/* Ambient Top Shadow / Metadata overlay */}
-        <div className="z-10 text-center pointer-events-none">
-          <span className="text-[10px] tracking-[0.25em] font-mono text-[#94a3b8] uppercase">
-            {genre || "MÚSICA INSTRUMENTAL SENSORIAL"}
-          </span>
-        </div>
+        {canvasBg === "aurora" && (
+          <>
+            <div className="absolute inset-0 canvas-aurora pointer-events-none z-0"></div>
+            <div className="absolute inset-0 bg-black/30 pointer-events-none z-0"></div>
+          </>
+        )}
+
+        {canvasBg === "stars" && (
+          <div className="absolute inset-0 bg-[#020108] overflow-hidden pointer-events-none z-0">
+            <div className="canvas-stars"></div>
+            <div className="absolute inset-0 bg-radial-gradient from-transparent via-black/40 to-black/80 pointer-events-none"></div>
+          </div>
+        )}
+
+        {canvasBg === "pulse" && (
+          <div className="absolute inset-0 bg-[#040209] flex items-center justify-center overflow-hidden pointer-events-none z-0">
+            <div className="absolute w-[450px] h-[450px] border border-immersive-accent/20 rounded-full scale-100 pulse-ring-1"></div>
+            <div className="absolute w-[450px] h-[450px] border border-cyan-500/15 rounded-full scale-100 pulse-ring-2"></div>
+            <div className="absolute w-[450px] h-[450px] border border-violet-500/10 rounded-full scale-100 pulse-ring-3"></div>
+            <div className="absolute inset-0 bg-radial-gradient from-transparent to-[#040209] pointer-events-none"></div>
+          </div>
+        )}
+
+        {canvasBg === "minimal" && (
+          <div className="absolute inset-0 bg-[#010102] pointer-events-none z-0 border border-white/[0.01]"></div>
+        )}
+
+        {/* Ambient Top Shadow / Metadata overlay - Hidden in Clean Mode */}
+        {!isCleanMode && (
+          <div className="z-10 text-center pointer-events-none transition-all duration-300">
+            <span className="text-[10px] tracking-[0.25em] font-mono text-[#94a3b8]/70 uppercase">
+              {genre || "MÚSICA INSTRUMENTAL SENSORIAL"}
+            </span>
+          </div>
+        )}
 
         {/* Active Subtitle Text Screen */}
         <div className="z-10 flex-1 flex items-center justify-center text-center px-8 relative">
           <div 
             key={activeBlock ? activeBlock.id : "silence"}
-            className="transition-all duration-700 ease-out transform scale-100 filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)] max-w-2xl"
+            className="transition-all duration-700 ease-out transform scale-100 filter drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)] max-w-2xl"
           >
             {activeBlock ? (
-              <p className="font-cinzel text-lg md:text-2xl xl:text-3xl font-medium tracking-wide text-white leading-relaxed text-shadow-lg">
+              <p className="font-cinzel text-lg md:text-2xl xl:text-3xl font-medium tracking-wide text-white leading-relaxed text-shadow-xl">
                 "{activeBlock.text}"
               </p>
             ) : (
@@ -194,183 +265,209 @@ export const PresentationScreen: React.FC<PresentationScreenProps> = ({
           </div>
         </div>
 
-        {/* Hover / Play Quick Controls overlay */}
-        <div className="absolute inset-x-0 bottom-0 top-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20">
-          <button 
-            id="play-overlay-btn"
-            onClick={onTogglePlay}
-            className="w-14 h-14 bg-white/10 hover:bg-white/20 hover:scale-105 border border-white/20 active:scale-95 transition-all outline-none rounded-full flex items-center justify-center text-white cursor-pointer"
-          >
-            {isPlaying ? (
-              <Pause className="w-6 h-6 fill-white" />
-            ) : (
-              <Play className="w-6 h-6 fill-white translate-x-0.5" />
-            )}
-          </button>
-        </div>
+        {/* Hover / Play Quick Controls overlay - Hidden in Clean Mode */}
+        {!isCleanMode && (
+          <div className="absolute inset-x-0 bottom-0 top-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20">
+            <button 
+              id="play-overlay-btn"
+              onClick={onTogglePlay}
+              className="w-14 h-14 bg-white/10 hover:bg-white/20 hover:scale-105 border border-white/20 active:scale-95 transition-all outline-none rounded-full flex items-center justify-center text-white cursor-pointer"
+            >
+              {isPlaying ? (
+                <Pause className="w-6 h-6 fill-white" />
+              ) : (
+                <Play className="w-6 h-6 fill-white translate-x-0.5" />
+              )}
+            </button>
+          </div>
+        )}
 
-        {/* Bottom Time Indicator Overlay */}
-        <div className="z-10 flex justify-between items-end font-mono text-[10px] text-slate-500 pointer-events-none">
-          <div className="text-left">
-            <div>BLOQUE ACTIVO: {activeBlock ? `#${activeBlock.id}` : "Ninguno"}</div>
-            <div>TIEMPOS: {activeBlock ? `${activeBlock.startTimeStr.split(",")[0]} -> ${activeBlock.endTimeStr.split(",")[0]}` : "00:00:00"}</div>
+        {/* Bottom Time Indicator Overlay - Hidden in Clean Mode */}
+        {!isCleanMode && (
+          <div className="z-10 flex justify-between items-end font-mono text-[10px] text-slate-500/80 pointer-events-none transition-all duration-300">
+            <div className="text-left">
+              <div>BLOQUE ACTIVO: {activeBlock ? `#${activeBlock.id}` : "Ninguno"}</div>
+              <div>TIEMPOS: {activeBlock ? `${activeBlock.startTimeStr.split(",")[0]} -> ${activeBlock.endTimeStr.split(",")[0]}` : "00:00:00"}</div>
+            </div>
+            <div className="text-right">
+              <div>SINFONÍA VISUAL SRT</div>
+              <div>VERSIÓN 1.2</div>
+            </div>
           </div>
-          <div className="text-right">
-            <div>SINFONÍA VISUAL SRT</div>
-            <div>VERSIÓN 1.0</div>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Scrubbable Cinematic Timeline Track */}
-      <div 
-        ref={containerRef}
-        onClick={handleTimelineClick}
-        className="h-3 w-full bg-immersive-bg border-t border-immersive-border cursor-pointer relative group/timeline"
-      >
-        {/* Background tracker */}
-        <div className="absolute inset-0 bg-white/5 group-hover/timeline:bg-white/10 transition-colors"></div>
-        
-        {/* Hover Cue Preview (subtitles timeline highlights) */}
-        {subtitleBlocks.map((block) => {
-          const startPct = duration > 0 ? (block.startTime / duration) * 100 : 0;
-          const endPct = duration > 0 ? (block.endTime / duration) * 100 : 0;
-          const widthPct = endPct - startPct;
-          return (
-            <div
-              key={block.id}
-              className="absolute top-0 bottom-0 bg-immersive-accent/15 border-r border-immersive-border pointer-events-none"
-              style={{ left: `${startPct}%`, width: `${widthPct}%` }}
-              title={block.text}
-            />
-          );
-        })}
-
-        {/* Played progress fill */}
+      {/* Scrubbable Cinematic Timeline Track - Hidden in Clean Mode */}
+      {!isCleanMode && (
         <div 
-          className="absolute top-0 bottom-0 bg-immersive-accent z-10 transition-all duration-100"
-          style={{ width: `${progressPercent}%` }}
-        ></div>
-
-        {/* Scrub handle indicator */}
-        <div 
-          className="absolute w-3 h-3 bg-white rounded-full z-20 border border-slate-900 -top-0 hover:scale-125 transition-transform"
-          style={{ left: `calc(${progressPercent}% - 6px)` }}
-        ></div>
-      </div>
-
-      {/* Subtitles Audio Controls Panel */}
-      <div className="bg-immersive-bg/75 px-6 py-4 border-t border-immersive-border flex flex-col lg:flex-row items-center justify-between gap-4 z-10">
-        
-        {/* Playback Buttons */}
-        <div className="flex items-center gap-3">
-          <button
-            id="seek-start-btn"
-            onClick={() => onSeek(0)}
-            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-immersive-glass border border-transparent hover:border-immersive-border transition active:scale-95 cursor-pointer"
-            title="Reiniciar reproducción"
-          >
-            <SkipBack className="w-5 h-5" />
-          </button>
+          ref={containerRef}
+          onClick={handleTimelineClick}
+          className="h-3 w-full bg-immersive-bg border-t border-immersive-border cursor-pointer relative group/timeline"
+        >
+          {/* Background tracker */}
+          <div className="absolute inset-0 bg-white/5 group-hover/timeline:bg-white/10 transition-colors"></div>
           
-          <button
-            id="toggle-playback-btn"
-            onClick={onTogglePlay}
-            className="px-5 py-2.5 bg-immersive-accent hover:bg-opacity-90 text-white rounded-full font-medium shadow-md shadow-immersive-accent/20 flex items-center justify-center gap-2 active:scale-98 transition cursor-pointer text-sm"
-          >
-            {isPlaying ? (
-              <>
-                <Pause className="w-4 h-4 fill-white" />
-                <span>Pausar Música</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4 fill-white" />
-                <span>Escuchar & Proyectar</span>
-              </>
-            )}
-          </button>
+          {/* Hover Cue Preview (subtitles timeline highlights) */}
+          {subtitleBlocks.map((block) => {
+            const startPct = duration > 0 ? (block.startTime / duration) * 100 : 0;
+            const endPct = duration > 0 ? (block.endTime / duration) * 100 : 0;
+            const widthPct = endPct - startPct;
+            return (
+              <div
+                key={block.id}
+                className="absolute top-0 bottom-0 bg-immersive-accent/15 border-r border-immersive-border pointer-events-none"
+                style={{ left: `${startPct}%`, width: `${widthPct}%` }}
+                title={block.text}
+              />
+            );
+          })}
+
+          {/* Played progress fill */}
+          <div 
+            className="absolute top-0 bottom-0 bg-immersive-accent z-10 transition-all duration-100"
+            style={{ width: `${progressPercent}%` }}
+          ></div>
+
+          {/* Scrub handle indicator */}
+          <div 
+            className="absolute w-3 h-3 bg-white rounded-full z-20 border border-slate-900 -top-0 hover:scale-125 transition-transform"
+            style={{ left: `calc(${progressPercent}% - 6px)` }}
+          ></div>
         </div>
+      )}
 
-        {/* Narrative Voiceover Controls */}
-        <div className="flex flex-wrap items-center gap-3 bg-immersive-glass/40 border border-immersive-border/60 rounded-2xl px-4 py-2.5 text-xs">
-          {/* Narrator activate button */}
-          <button
-            onClick={() => setIsSpeechEnabled(!isSpeechEnabled)}
-            className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 font-mono text-[11px] transition-all duration-300 select-none cursor-pointer ${
-              isSpeechEnabled
-                ? "bg-immersive-accent/15 border-immersive-accent/40 text-white shadow-lg shadow-immersive-accent/10"
-                : "bg-transparent border-immersive-border text-[#94a3b8] hover:text-white"
-            }`}
-            title={isSpeechEnabled ? "Desactivar Narración de Voz" : "Activar Narración de Voz"}
-          >
-            {isSpeechEnabled ? (
-              <>
-                <Mic className="w-3.5 h-3.5 text-immersive-accent animate-pulse" />
-                <span className="font-semibold text-white">NARRACIÓN ACTIVA</span>
-              </>
-            ) : (
-              <>
-                <MicOff className="w-3.5 h-3.5 text-slate-500" />
-                <span>NARRACIÓN DETENIDA</span>
-              </>
-            )}
-          </button>
+      {/* Subtitles Audio Controls Panel - Hidden in Clean Mode */}
+      {!isCleanMode && (
+        <div className="bg-immersive-bg/75 px-6 py-4 border-t border-immersive-border flex flex-col lg:flex-row items-center justify-between gap-4 z-10">
+          
+          {/* Playback Buttons */}
+          <div className="flex items-center gap-3">
+            <button
+              id="seek-start-btn"
+              onClick={() => onSeek(0)}
+              className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-immersive-glass border border-transparent hover:border-immersive-border transition active:scale-95 cursor-pointer"
+              title="Reiniciar reproducción"
+            >
+              <SkipBack className="w-5 h-5" />
+            </button>
+            
+            <button
+              id="toggle-playback-btn"
+              onClick={onTogglePlay}
+              className="px-5 py-2.5 bg-immersive-accent hover:bg-opacity-90 text-white rounded-full font-medium shadow-md shadow-immersive-accent/20 flex items-center justify-center gap-2 active:scale-98 transition cursor-pointer text-sm"
+            >
+              {isPlaying ? (
+                <>
+                  <Pause className="w-4 h-4 fill-white" />
+                  <span>Pausar Música</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 fill-white animate-pulse" />
+                  <span>Escuchar & Proyectar</span>
+                </>
+              )}
+            </button>
+          </div>
 
-          {isSpeechEnabled && (
-            <div className="flex flex-wrap items-center gap-2.5 transition">
-              {/* Voice selector */}
-              {voices.length > 0 && (
-                <div className="flex items-center gap-1 bg-immersive-bg/50 border border-immersive-border px-2.5 py-1 rounded-xl">
+          {/* Visual Canvas Background Selection */}
+          <div className="flex items-center gap-2 bg-immersive-glass/40 border border-immersive-border/60 rounded-xl px-3 py-1.5 text-xs font-mono">
+            <Layers className="w-3.5 h-3.5 text-immersive-accent" />
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider hidden sm:inline">Lienzo:</span>
+            <select
+              value={canvasBg}
+              onChange={(e) => setCanvasBg(e.target.value)}
+              className="bg-transparent text-white border-none focus:outline-none focus:ring-0 text-[11px] font-semibold cursor-pointer pr-1 transition-colors"
+              title="Seleccionar Lienzo de Fondo de la Proyección"
+            >
+              <option value="nebula" className="bg-[#0f0a15] text-white">Niebla Cósmica (Pulsos)</option>
+              <option value="aurora" className="bg-[#0f0a15] text-white">Aurora Boreal (Polar)</option>
+              <option value="stars" className="bg-[#0f0a15] text-white">Lluvia de Estrellas (Drift)</option>
+              <option value="pulse" className="bg-[#0f0a15] text-white">Púlsar Rítmico (Ondas)</option>
+              <option value="minimal" className="bg-[#0f0a15] text-white">Abismo Negro (Limpio)</option>
+            </select>
+          </div>
+
+          {/* Narrative Voiceover Controls */}
+          <div className="flex flex-wrap items-center gap-3 bg-immersive-glass/40 border border-immersive-border/60 rounded-2xl px-4 py-2.5 text-xs">
+            {/* Narrator activate button */}
+            <button
+              onClick={() => setIsSpeechEnabled(!isSpeechEnabled)}
+              className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 font-mono text-[11px] transition-all duration-300 select-none cursor-pointer ${
+                isSpeechEnabled
+                  ? "bg-immersive-accent/15 border-immersive-accent/40 text-white shadow-lg shadow-immersive-accent/10"
+                  : "bg-transparent border-immersive-border text-[#94a3b8] hover:text-white"
+              }`}
+              title={isSpeechEnabled ? "Desactivar Narración de Voz" : "Activar Narración de Voz"}
+            >
+              {isSpeechEnabled ? (
+                <>
+                  <Mic className="w-3.5 h-3.5 text-immersive-accent animate-pulse" />
+                  <span className="font-semibold text-white">NARRACIÓN ACTIVA</span>
+                </>
+              ) : (
+                <>
+                  <MicOff className="w-3.5 h-3.5 text-slate-500" />
+                  <span>NARRACIÓN DETENIDA</span>
+                </>
+              )}
+            </button>
+
+            {isSpeechEnabled && (
+              <div className="flex flex-wrap items-center gap-2.5 transition">
+                {/* Voice selector */}
+                {voices.length > 0 && (
+                  <div className="flex items-center gap-1 bg-immersive-bg/50 border border-immersive-border px-2.5 py-1 rounded-xl">
+                    <select
+                      value={selectedVoiceName}
+                      onChange={(e) => setSelectedVoiceName(e.target.value)}
+                      className="bg-transparent text-white border-none focus:outline-none focus:ring-0 text-[10px] max-w-[125px] font-medium cursor-pointer"
+                      title="Voz del narrador"
+                    >
+                      <option value="" className="bg-[#0f0a15] text-[#94a3b8]">Voz por defecto (ES)</option>
+                      {voices.map((v) => (
+                        <option key={v.name} value={v.name} className="bg-[#0f0a15] text-white">
+                          {v.name.replace("Microsoft", "").replace("Google", "").trim()} ({v.lang})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Rate speed selector */}
+                <div className="flex items-center gap-1.5 bg-immersive-bg/50 border border-immersive-border px-2.5 py-1 rounded-xl">
+                  <Sliders className="w-3 h-3 text-immersive-accent" />
                   <select
-                    value={selectedVoiceName}
-                    onChange={(e) => setSelectedVoiceName(e.target.value)}
-                    className="bg-transparent text-white border-none focus:outline-none focus:ring-0 text-[10px] max-w-[125px] font-medium cursor-pointer"
-                    title="Voz del narrador"
+                    value={speechRate}
+                    onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                    className="bg-transparent text-white border-none focus:outline-none focus:ring-0 text-[10px] font-semibold cursor-pointer"
+                    title="Velocidad del narrador"
                   >
-                    <option value="" className="bg-[#0f0a15] text-[#94a3b8]">Voz por defecto (ES)</option>
-                    {voices.map((v) => (
-                      <option key={v.name} value={v.name} className="bg-[#0f0a15] text-white">
-                        {v.name.replace("Microsoft", "").replace("Google", "").trim()} ({v.lang})
-                      </option>
-                    ))}
+                    <option value="0.75" className="bg-[#0f0a15] text-white">0.75x Lento</option>
+                    <option value="1.0" className="bg-[#0f0a15] text-white">1.0x Normal</option>
+                    <option value="1.25" className="bg-[#0f0a15] text-white">1.25x Rápido</option>
+                    <option value="1.5" className="bg-[#0f0a15] text-white">1.5x Veloz</option>
                   </select>
                 </div>
-              )}
-
-              {/* Rate speed selector */}
-              <div className="flex items-center gap-1.5 bg-immersive-bg/50 border border-immersive-border px-2.5 py-1 rounded-xl">
-                <Sliders className="w-3 h-3 text-immersive-accent" />
-                <select
-                  value={speechRate}
-                  onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
-                  className="bg-transparent text-white border-none focus:outline-none focus:ring-0 text-[10px] font-semibold cursor-pointer"
-                  title="Velocidad del narrador"
-                >
-                  <option value="0.75" className="bg-[#0f0a15] text-white">0.75x Lento</option>
-                  <option value="1.0" className="bg-[#0f0a15] text-white">1.0x Normal</option>
-                  <option value="1.25" className="bg-[#0f0a15] text-white">1.25x Rápido</option>
-                  <option value="1.5" className="bg-[#0f0a15] text-white">1.5x Veloz</option>
-                </select>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Current status info */}
-        <div className="text-center lg:text-right font-mono text-xs text-slate-400 flex flex-col lg:items-end justify-center">
-          <div className="flex items-center gap-2 justify-center lg:justify-end text-immersive-accent mb-0.5">
-            <Volume2 className="w-3.5 h-3.5 text-immersive-accent animate-pulse" />
-            <span>{isPlaying ? "Reproduciendo pista sonora mística..." : "Audio en pausa"}</span>
+            )}
           </div>
-          <span className="text-[10px] text-slate-500">
-            {duration > 0 
-              ? `Progreso de reproducción: ${Math.round(progressPercent)}%` 
-              : "Sube un archivo o elige un preset para escuchar"}
-          </span>
-        </div>
 
-      </div>
+          {/* Current status info */}
+          <div className="text-center lg:text-right font-mono text-xs text-slate-400 flex flex-col lg:items-end justify-center">
+            <div className="flex items-center gap-2 justify-center lg:justify-end text-immersive-accent mb-0.5">
+              <Volume2 className="w-3.5 h-3.5 text-immersive-accent animate-pulse" />
+              <span>{isPlaying ? "Reproduciendo pista mística..." : "Audio en pausa"}</span>
+            </div>
+            <span className="text-[10px] text-slate-500">
+              {duration > 0 
+                ? `Progreso de reproducción: ${Math.round(progressPercent)}%` 
+                : "Sube un archivo o elige un preset para escuchar"}
+            </span>
+          </div>
+
+        </div>
+      )}
 
     </div>
   );

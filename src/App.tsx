@@ -17,7 +17,9 @@ import {
   Film,
   Dribbble,
   Radio,
-  Palette
+  Palette,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 
 // Pre-load default initial dataset based on the first preset "Ecos Cósmicos de Andrómeda"
@@ -86,6 +88,15 @@ export default function App() {
       document.documentElement.style.setProperty("--accent-rgb", activeAccent.rgb);
     }
   }, [accentId, activeAccent]);
+
+  // Expanded layout state to hide sidebars and focus on projection/editor
+  const [isExpandedLayout, setIsExpandedLayout] = useState(() => {
+    return localStorage.getItem("muse-expanded-layout") === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("muse-expanded-layout", String(isExpandedLayout));
+  }, [isExpandedLayout]);
 
   // Inputs States
   const [title, setTitle] = useState(INITIAL_PRESET.title);
@@ -529,6 +540,29 @@ export default function App() {
               </select>
             </div>
 
+            {/* Pantalla Completa / Vista Expandida Toggle */}
+            <button
+              onClick={() => setIsExpandedLayout(!isExpandedLayout)}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs font-mono select-none cursor-pointer duration-300 transition-all ${
+                isExpandedLayout
+                  ? "bg-immersive-accent/15 border-immersive-accent text-white shadow-lg shadow-immersive-accent/10"
+                  : "bg-immersive-glass border-immersive-border text-[#94a3b8] hover:border-immersive-accent/50 hover:text-white"
+              }`}
+              title={isExpandedLayout ? "Restaurar paneles laterales" : "Ocultar paneles laterales para vista expandida"}
+            >
+              {isExpandedLayout ? (
+                <>
+                  <Minimize2 className="w-3.5 h-3.5 text-immersive-accent" />
+                  <span>Vista Normal</span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>Pantalla Completa</span>
+                </>
+              )}
+            </button>
+
             <span className="text-[10px] font-mono bg-immersive-glass text-cyan-400 border border-immersive-border px-2.5 py-1.5 rounded-xl flex items-center gap-1.5">
               <Radio className="w-3 h-3 animate-ping text-cyan-400" />
               <span>MOTOR GEMINI 3.5 FLASH</span>
@@ -545,7 +579,8 @@ export default function App() {
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
         
         {/* LEFT COLUMN: Input setup dashboard (5 cols) */}
-        <div className="lg:col-span-5 flex flex-col space-y-6">
+        {!isExpandedLayout && (
+          <div className="lg:col-span-5 flex flex-col space-y-6">
           
           {/* Preset panel */}
           <div className="bg-immersive-panel/90 border border-immersive-border rounded-2xl p-5 space-y-4 backdrop-blur-xl shadow-2xl">
@@ -746,7 +781,7 @@ export default function App() {
             {/* Error alerts if any */}
             {errorMessage && (
               <div className="p-3.5 bg-red-950/20 border border-red-900/30 text-red-400 rounded-xl flex items-start gap-3 text-xs leading-normal text-left">
-                <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5 animate-bounce" />
                 <div className="space-y-1">
                   <span className="font-semibold block uppercase tracking-wide text-[10px]">Error de Configuración</span>
                   <span>{errorMessage}</span>
@@ -754,11 +789,11 @@ export default function App() {
               </div>
             )}
           </div>
-
         </div>
+      )}
 
         {/* RIGHT COLUMN: Output display projection and editors (7 cols) */}
-        <div className="lg:col-span-7 flex flex-col space-y-6">
+        <div className={`${isExpandedLayout ? "lg:col-span-12" : "lg:col-span-7"} flex flex-col space-y-6`}>
           
           {/* Loading View overlay when Gemini is generating */}
           {isAnalyzing ? (
